@@ -10,7 +10,8 @@ use App\Http\Controllers\RiwayatMagangController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\JurnalController;
 use App\Http\Controllers\Admin\UserController;
-
+use Carbon\Carbon;
+use App\Models\PesertaMagang;
 
 // ======================================================
 // PUBLIC
@@ -105,6 +106,16 @@ Route::middleware(['auth', 'role:admin,operator'])->group(function () {
     Route::delete('/jurnal/{jurnal}', [JurnalController::class, 'destroy'])
         ->name('jurnal.destroy');
 
+    Route::get('/peserta/belum-aktif', function () {
+    $today = Carbon::today()->format('Y-m-d');
+    
+    $pesertas = PesertaMagang::with('divisi')
+        ->where('tanggal_mulai', '>', $today)
+        ->orderBy('tanggal_mulai', 'asc')
+        ->get();
+
+    return view('admin.peserta.belum_aktif', compact('pesertas'));
+})->name('peserta.belum_aktif')->middleware(['auth', 'role:admin,operator']);
 });
 
 

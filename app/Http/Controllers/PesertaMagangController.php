@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\PesertaMagang;
 use App\Models\Divisi;
 use Illuminate\Http\Request;
@@ -13,24 +14,36 @@ class PesertaMagangController extends Controller
     /**
      * Menampilkan data peserta aktif.
      */
-    public function index()
-    {
-        // Otomatis ubah peserta menjadi Selesai jika tanggal selesai sudah tercapai
-        PesertaMagang::where('status', 'Aktif')
-            ->whereDate('tanggal_selesai', '<=', Carbon::today())
-            ->update([
-                'status' => 'Selesai'
-            ]);
+    public function index(Request $request)
+{
+    $query = PesertaMagang::query();
 
-        // Ambil hanya peserta yang masih aktif
-        $pesertas = PesertaMagang::with('divisi')
-            ->where('status', 'Aktif')
-            ->latest()
-            ->get();
+    // 1. KELUARKAN PESERTA YANG SUDAH SELESAI DARI DATA PESERTA
+    $query->where('status', '!=', 'Selesai');
 
-        return view('peserta.index', compact('pesertas'));
+    // 2. Filter pencarian / divisi / status (jika ada)
+    if ($request->filled('keyword')) {
+        $keyword = $request->keyword;
+        $query->where(function($q) use ($keyword) {
+            $q->where('nama_lengkap', 'like', "%{$keyword}%")
+              ->orWhere('asal_sekolah', 'like', "%{$keyword}%")
+              ->orWhere('jurusan', 'like', "%{$keyword}%");
+        });
     }
 
+    if ($request->filled('divisi_id')) {
+        $query->where('divisi_id', $request->divisi_id);
+    }
+
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    $pesertas = $query->with('divisi')->latest()->get();
+    $divisis = Divisi::all();
+
+    return view('peserta.index', compact('pesertas', 'divisis'));
+}
 
     /**
      * Menampilkan form tambah peserta.
@@ -239,5 +252,16 @@ class PesertaMagangController extends Controller
         return redirect()
             ->route('peserta.index')
             ->with('success', 'Data peserta berhasil dihapus.');
+    }
+    public function belumAktif()
+    {
+        $today = Carbon::today()->format('Y-m-d');
+
+        $pesertas = PesertaMagang::with('divisi') // Tambahkan ini agar relasi divisi terbawa
+            ->where('tanggal_mulai', '>', $today)
+            ->orderBy('tanggal_mulai', 'asc')
+            ->get();
+
+        return view('admin.peserta.belum_aktif', compact('pesertas'));
     }
 }

@@ -415,11 +415,11 @@
 
             <!-- DATA PESERTA -->
             <a
-                href="{{ route('peserta.index') }}"
-                class="nav-item {{ request()->is('peserta*') ? 'active' : '' }}"
+            href="{{ route('peserta.index') }}"
+            class="nav-item {{ (request()->routeIs('peserta.*') && !request()->routeIs('peserta.belum_aktif')) ? 'active' : '' }}"
             >
-                <span class="nav-icon">♙</span>
-                Data Peserta
+            <span class="nav-icon">♙</span>
+            Data Peserta
             </a>
 
             <!-- LIST JURNAL -->
@@ -447,6 +447,13 @@
             >
                 <span class="nav-icon">▤</span>
                 Riwayat Magang
+            </a>
+            <a
+                href="{{ route('peserta.belum_aktif') }}"
+                class="nav-item {{ request()->routeIs('peserta.belum_aktif') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">♙</span>
+                Peserta Belum Aktif
             </a>
 
         {{-- =================================================

@@ -300,6 +300,8 @@
 
                 <th>Status Jurnal</th>
 
+                <th>Status Magang</th>
+
                 <th>Nilai</th>
 
                 <th>Aksi</th>
@@ -380,6 +382,19 @@
 
                     </td>
 
+
+                    {{-- STATUS MAGANG (Kolom Baru) --}}
+                    <td>
+                        @if($peserta->status == 'Aktif')
+                            <span style="display: inline-block; padding: 6px 11px; background: #e4f7ed; color: #11955b; border-radius: 20px; font-size: 11px; font-weight: bold;">
+                                Aktif
+                            </span>
+                        @else
+                            <span style="display: inline-block; padding: 6px 11px; background: #e8f3ff; color: #1769aa; border-radius: 20px; font-size: 11px; font-weight: bold;">
+                                PKL Selesai
+                            </span>
+                        @endif
+                    </td>
 
                     {{-- NILAI --}}
                     <td>

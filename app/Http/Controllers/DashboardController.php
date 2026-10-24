@@ -4,69 +4,83 @@ namespace App\Http\Controllers;
 
 use App\Models\Divisi;
 use App\Models\PesertaMagang;
-use App\Http\Controllers\DashboardController;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+
 class DashboardController extends Controller
 {
-    public function index()
-    {
-        // Ambil semua divisi dan hitung peserta yang MASIH AKTIF
-        $divisis = Divisi::withCount([
-            'pesertas as peserta_magangs_count' => function ($query) {
-                $query->where('status', 'Aktif');
-            }
-        ])->get();
-
-        // Total divisi
-        $totalDivisi = $divisis->count();
-
-        // Total peserta aktif
-        $totalPesertaAktif = PesertaMagang::where('status', 'Aktif')->count();
-
-        // Total peserta selesai
-        $totalPesertaSelesai = PesertaMagang::where('status', 'Selesai')->count();
-
-        // Total seluruh kapasitas divisi
-        $totalKapasitas = $divisis->sum('kapasitas');
-
-        // Total kuota yang sedang terpakai
-        $totalTerisi = $divisis->sum('peserta_magangs_count');
-
-        // Sisa kuota
-        $sisaKuota = max($totalKapasitas - $totalTerisi, 0);
-
-        // ==========================================
-        // TAMBAHAN UNTUK CHART PRESENSI/PERSENTASE
-        // ==========================================
-        $chartLabels = [];
-        $chartData = [];
-
-        foreach ($divisis as $divisi) {
-            $chartLabels[] = $divisi->nama_divisi;
-            
-            // Hitung persentase keterisian per divisi berdasarkan total peserta aktif keseluruhan
-            if ($totalPesertaAktif > 0) {
-                $persentase = round(($divisi->peserta_magangs_count / $totalPesertaAktif) * 100);
-            } else {
-                $persentase = 0;
-            }
-            
-            $chartData[] = $persentase;
-        }
-
-        return view(
-            'admin.dashboard',
-            compact(
-                'divisis',
-                'totalDivisi',
-                'totalPesertaAktif',
-                'totalPesertaSelesai',
-                'sisaKuota',
-                'totalKapasitas',
-                'totalTerisi',
-                'chartLabels',
-                'chartData'
-            )
-        );
-    }
-}
+    public function index(Request $request)
+{
+    // 1. Ambil input periode (format: YYYY-MM), jika kosong gunakan bulan & tahun saat ini
+    $selectedPeriode = $request->input('periode', date('Y-m'));
     
+    // 2. Pecah string "YYYY-MM" menjadi tahun dan bulan terpisah
+    $pecahPeriode = explode('-', $selectedPeriode);
+    $selectedTahun = $pecahPeriode[0] ?? date('Y');
+    $selectedBulan = $pecahPeriode[1] ?? date('m');
+
+    // 3. Hitung peserta aktif/booking pada bulan & tahun tersebut
+    $divisis = Divisi::withCount([
+        'pesertas as peserta_magangs_count' => function ($query) use ($selectedBulan, $selectedTahun) {
+            $query->where('status', '!=', 'Selesai')
+                  ->whereYear('tanggal_mulai', '<=', $selectedTahun)
+                  ->whereMonth('tanggal_mulai', '<=', $selectedBulan)
+                  ->whereYear('tanggal_selesai', '>=', $selectedTahun)
+                  ->whereMonth('tanggal_selesai', '>=', $selectedBulan);
+        }
+    ])->get();
+
+    // 4. Total divisi
+    $totalDivisi = Divisi::count();
+    
+    // 5. Total peserta aktif berdasarkan filter periode
+    $totalPesertaAktif = PesertaMagang::where('status', '!=', 'Selesai')
+        ->whereYear('tanggal_mulai', '<=', $selectedTahun)
+        ->whereMonth('tanggal_mulai', '<=', $selectedBulan)
+        ->whereYear('tanggal_selesai', '>=', $selectedTahun)
+        ->whereMonth('tanggal_selesai', '>=', $selectedBulan)
+        ->count();
+        
+    // 6. Total peserta selesai (keseluruhan)
+    $totalPesertaSelesai = PesertaMagang::where('status', 'Selesai')->count();
+
+    // 7. Kapasitas & Terisi
+    $totalKapasitas = $divisis->sum('kapasitas');
+    $totalTerisi = $divisis->sum('peserta_magangs_count');
+    $sisaKuota = max($totalKapasitas - $totalTerisi, 0);
+
+    // ==========================================
+    // CHART PERSENTASE
+    // ==========================================
+    $chartLabels = [];
+    $chartData = [];
+
+    foreach ($divisis as $divisi) {
+        $chartLabels[] = $divisi->nama_divisi;
+        
+        if ($divisi->kapasitas > 0) {
+            $persentase = round(($divisi->peserta_magangs_count / $divisi->kapasitas) * 100);
+        } else {
+            $persentase = 0;
+        }
+        
+        $chartData[] = min($persentase, 100);
+    }
+
+    return view(
+        'admin.dashboard',
+        compact(
+            'divisis',
+            'totalDivisi',
+            'totalPesertaAktif',
+            'totalPesertaSelesai',
+            'sisaKuota',
+            'totalKapasitas',
+            'totalTerisi',
+            'chartLabels',
+            'chartData',
+            'selectedPeriode'
+        )
+    );
+}
+}

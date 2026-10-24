@@ -6,17 +6,35 @@ use App\Models\Jurnal;
 use App\Models\PesertaMagang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class JurnalController extends Controller
 {
     /**
      * Menampilkan daftar jurnal peserta
      */
-    public function index()
+public function index()
     {
+        $today = Carbon::today();
+
         $pesertas = PesertaMagang::with('divisi', 'jurnal')
-            ->where('status', 'Aktif')
-            ->orderBy('nama')
+            ->where(function($query) use ($today) {
+                // 1. Peserta Aktif HANYA jika tanggal mulainya sudah tiba / hari ini / sudah lewat
+                $query->where(function($sub) use ($today) {
+                    $sub->where('status', 'Aktif')
+                        ->whereDate('tanggal_mulai', '<=', $today);
+                })
+                // 2. ATAU peserta yang masa PKL-nya sudah Selesai
+                ->orWhere('status', 'Selesai');
+            })
+            // 3. Batasi hanya yang jurnalnya belum ada ATAU nilai jurnalnya masih kosong (null)
+            ->where(function($q) {
+                $q->whereDoesntHave('jurnal')
+                  ->orWhereHas('jurnal', function($jurnalQuery) {
+                      $jurnalQuery->whereNull('nilai');
+                  });
+            })
+            ->orderBy('tanggal_mulai', 'asc')
             ->get();
 
         return view('jurnal.index', compact('pesertas'));

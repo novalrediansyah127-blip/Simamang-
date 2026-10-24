@@ -402,6 +402,92 @@
         color: #1677e8;
     }
 
+    /* ================= FILTER PANEL (MENGGUNAKAN STYLE DARI PANEL) ================= */
+    .filter-panel {
+        background: white;
+        border: 1px solid #e8eef4;
+        border-radius: 10px;
+        padding: 22px;
+        margin-bottom: 25px;
+        box-shadow: 0 3px 10px rgba(31, 45, 61, .05);
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .filter-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #8795a1;
+        text-transform: uppercase;
+    }
+
+    .filter-input, .filter-select {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid #d9e2ec;
+        border-radius: 6px;
+        color: #243b53;
+        background-color: #fff;
+        outline: none;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        border-color: #1677e8;
+    }
+
+    .filter-actions {
+        grid-column: span 3;
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .btn-submit {
+        background: #1677e8;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-reset {
+        background: #bcccdc;
+        color: #243b53;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-submit:hover { background: #115ebb; }
+    .btn-reset:hover { background: #9fb3c8; }
+
+
 
     /* =========================
        RESPONSIVE
@@ -564,6 +650,34 @@
 
 </div>
 
+<!-- FILTER SHORTCUT PANEL (CEK KUOTA PERIODE BULAN & TAHUN) -->
+<div class="filter-panel">
+    <form action="{{ route('monitoring.index') }}" method="GET">
+        <div class="filter-grid" style="grid-template-columns: 1fr 1fr auto; align-items: end;">
+            <!-- Input Pilih Periode (Bulan & Tahun Kalender) -->
+            <div class="filter-group">
+                <label class="filter-label">Pilih Periode (Bulan & Tahun)</label>
+                <input type="month" 
+                       name="periode" 
+                       class="filter-input" 
+                       value="{{ request('periode', $selectedPeriodFe ?? date('Y-m')) }}">
+            </div>
+
+            <!-- Keterangan Singkat -->
+            <div class="filter-group">
+                <div style="font-size: 12px; color: #829ab1; padding-bottom: 8px;">
+                    *Pilih bulan & tahun dari kalender untuk cek ketersediaan kuota.
+                </div>
+            </div>
+
+            <!-- Tombol Aksi -->
+            <div class="filter-actions" style="margin-top: 0;">
+                <button type="submit" class="btn-submit">🔍 Cek Kuota</button>
+                <a href="{{ route('monitoring.index') }}" class="btn-reset">Reset</a>
+            </div>
+        </div>
+    </form>
+</div>
 
 <!-- =========================
      TABLE + CHART
@@ -621,17 +735,9 @@
                     @foreach($divisis as $divisi)
 
                         @php
-
-                            $terpakai = $divisi->pesertas
-                                ->where('status', 'Aktif')
-                                ->count();
-
-                            $sisa = max(
-                                $divisi->kapasitas - $terpakai,
-                                0
-                            );
-
-                        @endphp
+    $terpakai = $divisi->peserta_magangs_count;
+    $sisa = max($divisi->kapasitas - $terpakai, 0);
+@endphp
 
 
                         <tr>
@@ -693,13 +799,12 @@
 
                             <td>
 
-                                <a
-                                    href="{{ route('monitoring.show', $divisi->id) }}"
-                                    class="btn-view"
-                                >
-                                    Lihat Peserta →
-                                </a>
-
+                             <a href="{{ route('monitoring.show', ['divisi' => $divisi->id, 'periode' => request('periode', $selectedPeriode)]) }}" 
+   style="display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; font-size: 12px; font-weight: 600; color: #1677e8; background-color: transparent; border: 1.5px solid #1677e8; border-radius: 6px; text-decoration: none; transition: all 0.2s ease;"
+   onmouseover="this.style.backgroundColor='#1677e8'; this.style.color='#ffffff';"
+   onmouseout="this.style.backgroundColor='transparent'; this.style.color='#1677e8';">
+    Lihat Peserta &rarr;
+</a>
                             </td>
 
                         </tr>
@@ -747,16 +852,11 @@
                 @foreach($divisis as $index => $divisi)
 
                     @php
-
-                        $terpakai = $divisi->pesertas
-                            ->where('status', 'Aktif')
-                            ->count();
-
-                        $persentase = $divisi->kapasitas > 0
-                            ? round(($terpakai / $divisi->kapasitas) * 100)
-                            : 0;
-
-                    @endphp
+    $terpakai = $divisi->peserta_magangs_count;
+    $persentase = $divisi->kapasitas > 0 
+        ? round(($terpakai / $divisi->kapasitas) * 100) 
+        : 0;
+@endphp
 
 
                     <div class="chart-item">

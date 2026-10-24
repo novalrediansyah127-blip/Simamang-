@@ -641,14 +641,27 @@
 
 
                     <td>
+    @php
+        $today = \Carbon\Carbon::today();
+        // Sesuaikan nama variabel objek peserta di foreach kamu, misal $peserta atau $item
+        $tglMulai = \Carbon\Carbon::parse($peserta->tanggal_mulai);
+        $tglSelesai = \Carbon\Carbon::parse($peserta->tanggal_selesai);
+    @endphp
 
-                        <span class="status status-active">
-
-                            Aktif
-
-                        </span>
-
-                    </td>
+    @if ($today->lt($tglMulai))
+        <span class="status status-pending" style="background-color: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 9999px; font-weight: bold; font-size: 11px;">
+            Belum Aktif
+        </span>
+    @elseif ($today->gte($tglMulai) && $today->lte($tglSelesai))
+        <span class="status status-active">
+            Aktif
+        </span>
+    @else
+        <span class="status status-completed" style="background-color: #f1f5f9; color: #475569; padding: 3px 10px; border-radius: 9999px; font-weight: bold; font-size: 11px;">
+            Selesai
+        </span>
+    @endif
+</td>
 
 
                     <!-- AKSI -->
