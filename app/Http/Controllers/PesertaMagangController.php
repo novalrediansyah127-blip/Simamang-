@@ -14,37 +14,41 @@ class PesertaMagangController extends Controller
     /**
      * Menampilkan data peserta aktif.
      */
-    public function index(Request $request)
+
+public function index(Request $request)
 {
+    $today = Carbon::today();
+
+    // OTOMATIS: Ubah status peserta menjadi 'Selesai' jika tanggal selesainya sudah lewat hari ini
+    PesertaMagang::where('tanggal_selesai', '<', $today)
+                 ->where('status', '!=', 'Selesai')
+                 ->update(['status' => 'Selesai']);
+
     $query = PesertaMagang::query();
 
-    // 1. KELUARKAN PESERTA YANG SUDAH SELESAI DARI DATA PESERTA
+    // HANYA tampilkan peserta yang statusnya bukan 'Selesai'
     $query->where('status', '!=', 'Selesai');
 
-    // 2. Filter pencarian / divisi / status (jika ada)
+    // Filter pencarian keyword
     if ($request->filled('keyword')) {
         $keyword = $request->keyword;
         $query->where(function($q) use ($keyword) {
-            $q->where('nama_lengkap', 'like', "%{$keyword}%")
+            $q->where('nama', 'like', "%{$keyword}%")
               ->orWhere('asal_sekolah', 'like', "%{$keyword}%")
               ->orWhere('jurusan', 'like', "%{$keyword}%");
         });
     }
 
+    // Filter divisi
     if ($request->filled('divisi_id')) {
         $query->where('divisi_id', $request->divisi_id);
     }
 
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
-    }
-
-    $pesertas = $query->with('divisi')->latest()->get();
+    $pesertas = $query->with('divisi')->orderBy('tanggal_mulai', 'asc')->get();
     $divisis = Divisi::all();
 
     return view('peserta.index', compact('pesertas', 'divisis'));
 }
-
     /**
      * Menampilkan form tambah peserta.
      */
